@@ -13,5 +13,10 @@ RUN apt-get update && \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Install Maven
+USER root
+RUN apt-get update && apt-get install -y maven && rm -rf /var/lib/apt/lists/*
+USER $NB_UID
+
 # Spark jobs will live in /opt/spark/jobs
 WORKDIR /opt/spark/jobs
