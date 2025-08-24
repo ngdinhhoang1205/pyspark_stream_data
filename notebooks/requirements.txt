@@ -1,0 +1,27 @@
+# Core
+pyspark==3.5.0
+pandas==2.2.2
+numpy==1.26.4
+
+# Streaming & Kafka
+kafka-python==2.0.2
+confluent-kafka==2.3.0   # better Kafka client, optional
+
+# Database
+psycopg2-binary==2.9.9   # PostgreSQL connector
+SQLAlchemy>=1.4,<2.0       # if you want ORM
+
+# Airflow extras
+apache-airflow-providers-apache-spark==4.7.0
+apache-airflow-providers-postgres==5.10.0
+
+# Data visualization (for Jupyter)
+matplotlib==3.9.2
+seaborn==0.13.2
+
+# Machine Learning (optional, for notebooks/analytics)
+scikit-learn==1.5.1
+
+# Utils
+requests==2.32.3
+python-dotenv==1.0.1   # manage env vars
