@@ -45,13 +45,25 @@ customer_schema = (
 # order data to table format
 customer_stream_df = customer_trans.withColumn('value_json', from_json(col('value'), customer_schema)).selectExpr('value_json.*')
 
+def customer_event_output(df, batch_id):
+    print(f"Batch id: {batch_id}")
+    (
+        df
+        .write
+        .format('parquet')
+        .mode('append')
+        .save('./data/output/customer_event/')
+    )
+
+    # Show a preview in notebook logs
+    df.show(truncate=False)
+
 # Write the output to console sink to check the output --to remove later
 (customer_stream_df
  .writeStream
- .format('console')
- .outputMode('append')
- .trigger(continuous='10 seconds')
- .option('checkpointLocation', 'checkpoint_dir_kafka_customer_event')
+ .foreachBatch(customer_event_output)
+ .trigger(processingTime='10 seconds')
+ .option('checkpointLocation', './data/checkpoints/customer_event')
  .start()
  .awaitTermination()
 )
