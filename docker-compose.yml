@@ -1,6 +1,7 @@
-x-airflow-common:
-  &airflow-common
-  image: apache/airflow:2.9.3
+x-airflow-common: &airflow-common
+  build:
+    context: ./airflow        
+    dockerfile: Dockerfile
   environment:
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
     AIRFLOW__CORE__LOAD_EXAMPLES: "false"
@@ -9,18 +10,31 @@ x-airflow-common:
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
     AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres:5432/airflow
     AIRFLOW__LOGGING__LOGGING_LEVEL: INFO
-    _PIP_ADDITIONAL_REQUIREMENTS: "apache-airflow-providers-apache-spark==5.* apache-airflow-providers-postgres==5.* apache-airflow-providers-apache-kafka==2.*"
-  user: "50000:0"
+    AIRFLOW__WEBSERVER__AUTHENTICATE: "True"
+    AIRFLOW__WEBSERVER__AUTH_BACKEND: "airflow.www.security.AuthenticationManager"
+    _AIRFLOW_WWW_USER_CREATE: true
+    _AIRFLOW_WWW_USER_USERNAME: admin
+    _AIRFLOW_WWW_USER_PASSWORD: admin
+    _AIRFLOW_WWW_USER_FIRSTNAME: Admin
+    _AIRFLOW_WWW_USER_LASTNAME: User
+    _AIRFLOW_WWW_USER_ROLE: Admin
+    _AIRFLOW_WWW_USER_EMAIL: admin@example.com
+
+
+
   volumes:
     - ./airflow/dags:/opt/airflow/dags
     - ./airflow/logs:/opt/airflow/logs
     - ./airflow/plugins:/opt/airflow/plugins
     - ./spark/jobs:/opt/spark/jobs
+
   depends_on:
     postgres:
       condition: service_healthy
+
   networks:
     - data-platform
+
 
 services:
   # -------------------- Kafka (KRaft single node) --------------------
@@ -196,13 +210,20 @@ services:
   airflow-init:
     <<: *airflow-common
     container_name: airflow-init
-    entrypoint: /bin/bash
-    command: -c "airflow db init && airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com || true"
+    entrypoint: ""
+    command: bash -c "airflow db migrate"
+          #   && \ 
+          # airflow users create --username admin \ 
+          #                       --password admin \ 
+          #                       --firstname Admin \ 
+          #                       --lastname User \ 
+          #                       --role Admin \ 
+          #                       --email admin@example.com"
 
   airflow-webserver:
     <<: *airflow-common
     container_name: airflow-webserver
-    command: webserver
+    command: api-server
     ports:
       - "8088:8080"
     depends_on:
@@ -211,7 +232,7 @@ services:
       airflow-init:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/version || exit 1"]
       interval: 10s
       timeout: 10s
       retries: 10
