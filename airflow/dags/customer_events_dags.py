@@ -12,10 +12,10 @@ default_args = {
 }
 
 with DAG(
-    "customer_events_dag",
+    dag_id="customer_events_dag",
     default_args=default_args,
     description="Run Spark job for customer_events_write",
-    schedule="@once",  # run once when scheduler starts
+    schedule=None,
     start_date=datetime(2025, 8, 24),
     catchup=False,
     tags=["spark", "customer"],

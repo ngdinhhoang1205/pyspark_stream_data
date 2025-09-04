@@ -212,13 +212,16 @@ services:
     container_name: airflow-init
     entrypoint: ""
     command: bash -c "airflow db migrate"
-          #   && \ 
-          # airflow users create --username admin \ 
-          #                       --password admin \ 
-          #                       --firstname Admin \ 
-          #                       --lastname User \ 
-          #                       --role Admin \ 
-          #                       --email admin@example.com"
+
+  airflow-dag-processor:
+    <<: *airflow-common
+    container_name: airflow-dag-processor
+    command: dag-processor
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
 
   airflow-webserver:
     <<: *airflow-common
@@ -240,12 +243,27 @@ services:
   airflow-scheduler:
     <<: *airflow-common
     container_name: airflow-scheduler
-    command: scheduler
+    entrypoint: ["/bin/bash", "-c"]
+    command: |
+      "airflow scheduler &
+
+      # Wait for DAGs to be parsed
+      until airflow dags list | grep customer_events_dag; do
+        echo '⏳ Waiting for DAGs to be parsed...'
+        sleep 5
+      done
+
+      echo '🚀 DAG found, triggering...'
+      airflow dags trigger customer_events_dag
+
+      # Keep container alive with scheduler logs
+      wait"
     depends_on:
       postgres:
         condition: service_healthy
       airflow-webserver:
-        condition: service_started
+        # condition: service_started
+        condition: service_healthy
 
   # -------------------- Optional: Kafka UI (for debugging) --------------------
   kafka-ui:
